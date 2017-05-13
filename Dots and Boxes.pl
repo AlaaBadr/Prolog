@@ -21,11 +21,11 @@ expert(X):-
         ].
 
 /* alphabeta algorithm   general part*/
-alphabetamax(State,Depth,_,_,Ret,_):-
+alphabetamax(State,Depth,_,_,Ret,State):-
         (isTerminal(State,_);Depth=0),!,
         utility(State,Ret)/*,write(State), write(Ret),nl*/.
 
-alphabetamin(State,Depth,_,_,Ret,_):-
+alphabetamin(State,Depth,_,_,Ret,State):-
         (isTerminal(State,_);Depth=0),!,
         utility(State,Ret)/*,write(State), write(Ret),nl*/.
 

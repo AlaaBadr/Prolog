@@ -21,11 +21,11 @@ expert(X):-
         ].
 
 /* alphabeta algorithm   general part*/
-alphabetamax(State,Depth,_,_,Ret,_):-
+alphabetamax(State,Depth,_,_,Ret,State):-
         (isTerminal(State,_);Depth=0),!,
         utility(State,Ret)/*,write(State), write(Ret),nl*/.
 
-alphabetamin(State,Depth,_,_,Ret,_):-
+alphabetamin(State,Depth,_,_,Ret,):-
         (isTerminal(State,_);Depth=0),!,
         utility(State,Ret)/*,write(State), write(Ret),nl*/.
 
@@ -78,9 +78,7 @@ selectChildmin([H|T],Depth,Alpha,Beta,Ret,BestTillNow,SelectChild):-
         A>=B,!.*/
 
 getChildren(s(Turn,S),Ch,Depth):-
-        bagof(X,move(s(Turn,S),X,Depth),TmpCh),
-        opp(Turn,NewTurn),
-        delete(TmpCh,s(NewTurn,S),Ch),!.
+        bagof(X,move(s(Turn,S),X,Depth),Ch),!.
 
 getChildren(_,[],_).
 
