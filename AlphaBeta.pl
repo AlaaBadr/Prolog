@@ -23,11 +23,11 @@ expert(X):-
 /* alphabeta algorithm   general part*/
 alphabetamax(State,Depth,_,_,Ret,_):-
         (isTerminal(State,_);Depth=0),!,
-        utility(State,Ret),write(State), write(Ret),nl.
+        utility(State,Ret)/*,write(State), write(Ret),nl*/.
 
 alphabetamin(State,Depth,_,_,Ret,_):-
         (isTerminal(State,_);Depth=0),!,
-        utility(State,Ret),write(State), write(Ret),nl.
+        utility(State,Ret)/*,write(State), write(Ret),nl*/.
 
 alphabetamax(State,Depth,Alpha,Beta,Ret,Next):-
         getChildren(State,Children),
@@ -77,8 +77,10 @@ selectChildmin([H|T],Depth,Alpha,Beta,Ret,BestTillNow,SelectChild):-
 /*max(A,B,A,VA,_,VA):-
         A>=B,!.*/
 
-getChildren(S,Ch):-
-        setof(X,move(S,X),Ch),!.
+getChildren(s(Turn,S),Ch):-
+        setof(X,move(s(Turn,S),X),TmpCh),
+        opp(Turn,NewTurn),
+        delete(TmpCh,s(NewTurn,S),Ch),!.
 
 getChildren(_,[]).
 
@@ -98,21 +100,21 @@ move(s(Turn,V),s(Nt,NV)):-
         play2D(V,NV,V,Turn).
 
 play([e|A],[ne|A],List,Turn, Col):-
-        nth0(Col,List,e),
-        write("Column "),
-        write(Col),
-        nl,!.
+        nth0(Col,List,e).
+        %write("Column "),
+        %write(Col),
+        %nl.
 play([H|A],[H|NA],List,Turn, Col):-
         play(A,NA,List,Turn, Col).
 
 
 play2D([H|Tail], NewState,State, Turn):-
-        member('e',H),!,
+        member('e',H),
         nth0(Row,State,H),
-        write("Row "),
-        write(Row),nl,
+        %write("Row "),
+        %write(Row),nl,
         play(H, NewH,H, Turn, Col),
-        replace(State, Row, NewH, TmpS),!,
+        replace(State, Row, NewH, TmpS),
         checkRoom(TmpS, Row, Col,Turn,NewState).
 play2D([H|Tail], NewTail,State, Turn):-
         play2D(Tail, NewTail,State, Turn).
@@ -247,13 +249,14 @@ playerMove(State, Row, Col, NewState):-
         replace(RowReq, Col, ne, ChangedRow),
         replace(State, Row, ChangedRow, NewState),!.
 
-run(S):-
-        isTerminal(S,Win),!,
+run(s(_,S)):-
+        isTerminal(s(_,S),Win),!,
+        print2D(S),
         write('Game over Winner is '),
         write(Win),nl.
 
 run(s('A',S)):-
-        alphabetamax(s('A',S),3,-30,30,_,NS),
+        alphabetamax(s('A',S),6,-30,30,_,NS),
         run(NS).%run(s(x,NS))
 
 run(s('B',S)):-
@@ -265,7 +268,12 @@ run(s('B',S)):-
         run(s('A',NS)).
 
 run:-
-        beginner(X),
+        write('1.Beginner'),nl,
+        write('2.Expert'),nl,
+        read(Choice),
+        (   (Choice = 1) ->
+        (   beginner(X));
+        (   expert(X))     ),
         run(s('B',X)).
 
 
