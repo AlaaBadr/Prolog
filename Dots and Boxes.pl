@@ -78,9 +78,7 @@ selectChildmin([H|T],Depth,Alpha,Beta,Ret,BestTillNow,SelectChild):-
         A>=B,!.*/
 
 getChildren(s(Turn,S),Ch,Depth):-
-        bagof(X,move(s(Turn,S),X,Depth),TmpCh),
-        opp(Turn,NewTurn),
-        delete(TmpCh,s(NewTurn,S),Ch),!.
+        bagof(X,move(s(Turn,S),X,Depth),Ch),!.
 
 getChildren(_,[],_).
 
@@ -110,7 +108,13 @@ playNoRec(State, NewState, Turn,Depth):-
         (
                (TmpS \= NState) ->
                     (
-                        alphabetamax(s(Turn,NState), Depth, -25, 25, _, s(_,NewState))
+                        (
+                           (Turn = 'A') ->
+                              (alphabetamax(s(Turn,NState), Depth, -25, 25, _, s(_,NewState)))
+                               ;
+                              (alphabetamin(s(Turn,NState), Depth, -25, 25, _, s(_,NewState)))
+                        )
+
                     );
                     (   NewState = NState )
         ).
@@ -200,8 +204,8 @@ count([H|T], X, Result):-
         Result is TmpResult1 + TmpResult2.
 
 count1D([X], X, 1):-!.
-count1D([Y], X, 0):-!,
-        X \= Y.
+count1D([Y], X, 0):-
+        X \= Y,!.
 count1D([H|T], X, Result):-
         count1D([H], X, Tmp1),
         count1D(T, X, Tmp2),
