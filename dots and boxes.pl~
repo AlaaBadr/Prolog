@@ -23,18 +23,18 @@ expert(X):-
 /* alphabeta algorithm   general part*/
 alphabetamax(State,Depth,_,_,Ret,_):-
         (isTerminal(State,_);Depth=0),!,
-        utility(State,Ret),write(State), write(Ret),nl.
+        utility(State,Ret)/*,write(State), write(Ret),nl*/.
 
 alphabetamin(State,Depth,_,_,Ret,_):-
         (isTerminal(State,_);Depth=0),!,
-        utility(State,Ret),write(State), write(Ret),nl.
+        utility(State,Ret)/*,write(State), write(Ret),nl*/.
 
 alphabetamax(State,Depth,Alpha,Beta,Ret,Next):-
-        getChildren(State,Children),
+        getChildren(State,Children,Depth),
         selectChildmax(Children,Depth,Alpha,Beta,Ret,_,Next).
 
 alphabetamin(State,Depth,Alpha,Beta,Ret,Next):-
-        getChildren(State,Children),
+        getChildren(State,Children,Depth),
         selectChildmin(Children,Depth,Alpha,Beta,Ret,_,Next).
 
 
@@ -77,10 +77,12 @@ selectChildmin([H|T],Depth,Alpha,Beta,Ret,BestTillNow,SelectChild):-
 /*max(A,B,A,VA,_,VA):-
         A>=B,!.*/
 
-getChildren(S,Ch):-
-        setof(X,move(S,X),Ch),!.
+getChildren(s(Turn,S),Ch,Depth):-
+        bagof(X,move(s(Turn,S),X,Depth),TmpCh),
+        opp(Turn,NewTurn),
+        delete(TmpCh,s(NewTurn,S),Ch),!.
 
-getChildren(_,[]).
+getChildren(_,[],_).
 
 
 /* problem dependant part */
@@ -93,36 +95,32 @@ opp('B','A').
 
 /* generate children of a state  */
 
-move(s(Turn,V),s(Nt,NV)):-
+move(s(Turn,V),s(Nt,NV),Depth):-
         opp(Turn,Nt),
-        play2D(V,NV,V,Turn).
+        playNoRec(V,NV,Turn,Depth).
+       % write(NV),nl,nl.
 
-play([e|A],[ne|A],List,Turn, Col):-
-        nth0(Col,List,e),
-        write("Column "),
-        write(Col),
-        nl,!.
-play([H|A],[H|NA],List,Turn, Col):-
-        play(A,NA,List,Turn, Col).
+playNoRec(State, NewState, Turn,Depth):-
+        nth0(Row, State, _),
+        nth0(Row, State, CurrRow),
+        nth0(Col, CurrRow, e),
+        replace(CurrRow, Col, ne, NewRow),
+        replace(State, Row, NewRow, TmpS),
+        checkRoom(TmpS, Row, Col,Turn,NState),
+        (
+               (TmpS \= NState) ->
+                    (
+                        alphabetamax(s(Turn,NState), Depth, -25, 25, _, s(_,NewState))
+                    );
+                    (   NewState is NState )
+        ).
 
-
-play2D([H|Tail], NewState,State, Turn):-
-        member('e',H),!,
-        nth0(Row,State,H),
-        write("Row "),
-        write(Row),nl,
-        play(H, NewH,H, Turn, Col),
-        replace(State, Row, NewH, TmpS),!,
-        checkRoom(TmpS, Row, Col,Turn,NewState).
-play2D([H|Tail], NewTail,State, Turn):-
-        play2D(Tail, NewTail,State, Turn).
-
-replace([_|T],0,X,[X|T]).
+replace([_|T],0,X,[X|T]):-!.
 replace([H|T],Index,X,[H|NewT]):-
     Index > -1,
     NewIndex is Index - 1,
     replace(T,NewIndex,X,NewT),!.
-replace(L,_,_,L).
+replace(L,_,_,L):-!.
 
 fillRoom(State,Row,Col,Turn,NewState):-
         (Row < 0,!;
@@ -202,7 +200,7 @@ count([H|T], X, Result):-
         Result is TmpResult1 + TmpResult2.
 
 count1D([X], X, 1):-!.
-count1D([Y], X, 0):-
+count1D([Y], X, 0):-!,
         X \= Y.
 count1D([H|T], X, Result):-
         count1D([H], X, Tmp1),
@@ -235,7 +233,7 @@ print1D([H|T],RowIndex):-
         (
             (   (H = ne) ->
             (
-              (0 is RowIndex mod 2 , write("__") ); (write("|"))
+              (0 is RowIndex mod 2 , write("__") ); (write("| "))
             );
             (write(H),write(" ")))
         )),print1D(T, RowIndex).
@@ -247,26 +245,65 @@ playerMove(State, Row, Col, NewState):-
         replace(RowReq, Col, ne, ChangedRow),
         replace(State, Row, ChangedRow, NewState),!.
 
-run(S):-
-        isTerminal(S,Win),!,
+difficulity(1,2).
+difficulity(2,4).
+difficulity(3,6).
+
+run(s(_,S),_):-
+        isTerminal(s(_,S),Win),!,
+        print2D(S),
         write('Game over Winner is '),
         write(Win),nl.
 
-run(s('A',S)):-
-        alphabetamax(s('A',S),3,-30,30,_,NS),
-        run(NS).%run(s(x,NS))
+run(s('A',S),Depth):-
+        alphabetamax(s('A',S),Depth,-25,25,_,NS),
+        run(NS,Depth).%run(s(x,NS))
 
-run(s('B',S)):-
-        print2D(S),nl,write('Select the row and col number you want to play in'),
-        read(Row),
-        read(Col),
-        playerMove(S, Row, Col, TmpNS),
-        checkRoom(TmpNS,Row,Col,'B',NS),
-        run(s('A',NS)).
+run(s('B',S),Depth):-
+        print2D(S),nl,
+        write('p to play'),nl,
+        write('s to skip'),nl,
+        read(Command),
+        (
+         (Command = p) ->
+            (
+                write('Select the row and col number you want to play in '),
+                read(Row),
+                read(Col),
+                playerMove(S, Row, Col, TmpNS),
+                checkRoom(TmpNS,Row,Col,'B',NS),
+                (
+                  (TmpNS = NS) ->
+                    (
+                        run(s('A',NS),Depth)
+                    );
+                    (
+                        run(s('B',NS),Depth)
+                    )
+                )
+
+            );
+            (
+                run(s('A',S),Depth)
+            )
+        ).
 
 run:-
-        beginner(X),
-        run(s('B',X)).
+        write('1.Beginner'),nl,
+        write('2.Expert'),nl,
+        read(Choice),
+        (   (Choice = 1) ->
+        (   beginner(X)
+        );
+        (   expert(X)
+        )
+        ),
+        write('1.Easy'),nl,
+        write('2.Medium'),nl,
+        write('3.Hard'),nl,
+        read(Difficulity),
+        difficulity(Difficulity, Depth),
+        run(s('B',X),Depth).
 
 
 
